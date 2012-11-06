@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Colaghost Blog]]></title>
+  <title><![CDATA[Colaghost]]></title>
   <link href="http://colaghost.github.com/atom.xml" rel="self"/>
   <link href="http://colaghost.github.com/"/>
-  <updated>2012-11-06T10:12:17+08:00</updated>
+  <updated>2012-11-06T10:17:12+08:00</updated>
   <id>http://colaghost.github.com/</id>
   <author>
     <name><![CDATA[colaghost]]></name>
