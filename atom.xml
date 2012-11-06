@@ -4,7 +4,7 @@
   <title><![CDATA[Colaghost]]></title>
   <link href="http://colaghost.github.com/atom.xml" rel="self"/>
   <link href="http://colaghost.github.com/"/>
-  <updated>2012-11-06T10:35:29+08:00</updated>
+  <updated>2012-11-06T10:41:27+08:00</updated>
   <id>http://colaghost.github.com/</id>
   <author>
     <name><![CDATA[colaghost]]></name>
@@ -12,5 +12,46 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Unix心传：无名师与MCSE能者（伪文言翻译）(转载)]]></title>
+    <link href="http://colaghost.github.com/blog/2012/11/06/unix-xin-zhuan/"/>
+    <updated>2012-11-06T10:39:00+08:00</updated>
+    <id>http://colaghost.github.com/blog/2012/11/06/unix-xin-zhuan</id>
+    <content type="html"><![CDATA[<p><strong>名师与MCSE能者</strong></p>
+
+<p>一通熟Windows之能者见无名师，曰：“闻师深修Unix之道，吾以密巧相述，相益，可乎？”</p>
+
+<p>无名师曰：“求智，善矣；然Unix之道并无甚密巧。”</p>
+
+<p>能者惑：“人曰师乃当世Unix大道之贤者，通晓其中之变法，如吾之于Windows；吾乃MCSE，有世所罕之证书，吾铭记各注册表项功能于心，更可细述任一Windows API，乃至微软所未曾详述者。师，所以为师，为智，皆揭而知他人之不知也。”</p>
+
+<p>无名师曰：“怠矣，本无秘，何以揭？”</p>
+
+<p>能者嗔：“若无密巧，何以修乃成师之业？”</p>
+
+<p>无名师曰：“求智者，以他人之不知为智，犹如求光明者，拥烛笼火，以为珍贵，乃终被灼也。”</p>
+
+<p>听此，能者顿觉灵光。</p>
+
+<p><strong>Master Foo and the MCSE</strong></p>
+
+<p>Once, a famous Windows system administrator came to Master Foo and asked him for instruction: “I have heard that you are a powerful Unix wizard. Let us trade secrets, that we may both gain thereby.”</p>
+
+<p>Master Foo said: “It is good that you seek wisdom. But in the Way of Unix, there are no secrets.”</p>
+
+<p>The administrator looked puzzled at this. “But it is said that you are a great Unix guru who knows all the innermost mysteries. As do I in Windows; I am an MCSE, and I have many other certifications of knowledge not common in the world. I know even the most obscure registry entries by heart. I can tell you everything about the Windows API, yes, even secrets those of Redmond have half-forgotten. What is the arcane lore that gives you your power?”</p>
+
+<p>Master Foo said: “I have none. Nothing is hidden, nothing is revealed.”</p>
+
+<p>Growing angry, the administrator said “Very well, if you hold no secrets, then tell me: what do I have to know to become as powerful in the Unix way as you?”</p>
+
+<p>Master Foo said: “A man who mistakes secrets for knowledge is like a man who, seeking light, hugs a candle so closely that he smothers it and burns his hand.”</p>
+
+<p>Upon hearing this, the administrator was enlightened.</p>
+
+<p>转载源：http://apt-blog.net/master-foo-and-the-mcse</p>
+]]></content>
+  </entry>
   
 </feed>
