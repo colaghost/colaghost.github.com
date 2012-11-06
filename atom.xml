@@ -4,7 +4,7 @@
   <title><![CDATA[Colaghost]]></title>
   <link href="http://colaghost.github.com/atom.xml" rel="self"/>
   <link href="http://colaghost.github.com/"/>
-  <updated>2012-11-06T10:17:12+08:00</updated>
+  <updated>2012-11-06T10:27:45+08:00</updated>
   <id>http://colaghost.github.com/</id>
   <author>
     <name><![CDATA[colaghost]]></name>
@@ -18,7 +18,7 @@
     <link href="http://colaghost.github.com/blog/2012/11/02/hello-world/"/>
     <updated>2012-11-02T15:53:00+08:00</updated>
     <id>http://colaghost.github.com/blog/2012/11/02/hello-world</id>
-    <content type="html"><![CDATA[
+    <content type="html"><![CDATA[<p>这是一个尝试</p>
 ]]></content>
   </entry>
   
