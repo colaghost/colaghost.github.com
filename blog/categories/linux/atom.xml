@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Colaghost's Blog]]></title>
-  <link href="http://colaghost.github.com/atom.xml" rel="self"/>
+  <title><![CDATA[Category: linux | Colaghost's Blog]]></title>
+  <link href="http://colaghost.github.com/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://colaghost.github.com/"/>
   <updated>2012-11-09T23:39:25+08:00</updated>
   <id>http://colaghost.github.com/</id>
@@ -21,9 +21,8 @@
     <content type="html"><![CDATA[<p>我有一个usb耳机，在ubuntu下驱动也正常，不过有一个蛋疼的地方就是每次插进usb耳机都不会自动切换到usb耳机对应的声音输出设备，次次都要手动去选择对应的，于是想着能不能写一个脚本来实现。<br/>
 不过貌似关于这方面的中文资料不多，google了很久都没有什么结果，倒是找出一个freebsd上能实现的，就是sysctl，不过貌似ubuntu下实现不了。后来在stackoverflow上问老外才得知用pacmd可以列出各种可用的声音输出设备还有设置默认输出设备等操作神马的。<br/>
 弄了一下，果真OK了，写随意写了一个脚本来测试了，这个脚本假设系统使用pulseaudio的。<br/>
-原理也不难，就是检测所有的声音设备，找出当前默认的声音设备，然后把声音设备切换到下一个，重新运行脚本就可以把声音设备切换回原来默认的了。</p>
-
-<figure class='code'><figcaption><span> (change_out_device.sh)</span> <a href='http://colaghost.github.com/downloads/code/change_out_device.sh'>download</a></figcaption>
+原理也不难，就是检测所有的声音设备，找出当前默认的声音设备，然后把声音设备切换到下一个，重新运行脚本就可以把声音设备切换回原来默认的了。<br/>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span> (change_out_device.sh)</span> <a href='/downloads/code/change_out_device.sh'>download</a></figcaption>
  <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -78,8 +77,7 @@
 </span><span class='line'><span class="k">fi</span>
 </span><span class='line'>ndx+<span class="o">=</span>1
 </span><span class='line'><span class="k">done</span>;
-</span></code></pre></td></tr></table></div></figure>
-
+</span></code></pre></td></tr></table></div></figure></notextile></div></p>
 
 <p>脚本里在切换后会做notify-send的提示，假设找不到命令的可以执行sudo apt-get install libnotify-bin安装一下，但不安装也没有什么关系，只是一个提示而已。<br/>
 为了方便可以将脚本复制到/usr/bin目录下，然后在“键盘快捷键”里面添加多一个快捷键，命令就是脚本名了，最后设定好想要的快捷键，以后就可以直接切换了.</p>
