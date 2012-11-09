@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Colaghost's Blog</title>
+  <title>ubuntu下自动切换声音输出设备 - Colaghost's Blog</title>
   <meta name="author" content="colaghost">
 
   
@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://colaghost.github.com/">
+  <link rel="canonical" href="http://colaghost.github.com/blog/2012/11/09/auto-change-output-devices-in-ubuntu/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -63,15 +63,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2012/11/09/auto-change-output-devices-in-ubuntu/">Ubuntu下自动切换声音输出设备</a></h1>
+      <h1 class="entry-title">Ubuntu下自动切换声音输出设备</h1>
     
     
       <p class="meta">
@@ -94,7 +91,7 @@
   </header>
 
 
-  <div class="entry-content"><p>我有一个usb耳机，在ubuntu下驱动也正常，不过有一个蛋疼的地方就是每次插进usb耳机都不会自动切换到usb耳机对应的声音输出设备，次次都要手动去选择对应的，于是想着能不能写一个脚本来实现。<br/>
+<div class="entry-content"><p>我有一个usb耳机，在ubuntu下驱动也正常，不过有一个蛋疼的地方就是每次插进usb耳机都不会自动切换到usb耳机对应的声音输出设备，次次都要手动去选择对应的，于是想着能不能写一个脚本来实现。<br/>
 不过貌似关于这方面的中文资料不多，google了很久都没有什么结果，倒是找出一个freebsd上能实现的，就是sysctl，不过貌似ubuntu下实现不了。后来在stackoverflow上问老外才得知用pacmd可以列出各种可用的声音输出设备还有设置默认输出设备等操作神马的。<br/>
 弄了一下，果真OK了，写随意写了一个脚本来测试了，这个脚本假设系统使用pulseaudio的。<br/>
 原理也不难，就是检测所有的声音设备，找出当前默认的声音设备，然后把声音设备切换到下一个，重新运行脚本就可以把声音设备切换回原来默认的了。</p>
@@ -160,18 +157,51 @@
 <p>脚本里在切换后会做notify-send的提示，假设找不到命令的可以执行sudo apt-get install libnotify-bin安装一下，但不安装也没有什么关系，只是一个提示而已。<br/>
 为了方便可以将脚本复制到/usr/bin目录下，然后在“键盘快捷键”里面添加多一个快捷键，命令就是脚本名了，最后设定好想要的快捷键，以后就可以直接切换了.</p>
 </div>
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">colaghost</span></span>
+
+      
+
+
+
+
+
+
+
+
   
 
 
-    </article>
+<time datetime="2012-11-09T22:10:00+08:00" pubdate data-updated="true">Nov 9<span>th</span>, 2012</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
   
-  <div class="pagination">
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://colaghost.github.com/blog/2012/11/09/auto-change-output-devices-in-ubuntu/" data-via="" data-counturl="http://colaghost.github.com/blog/2012/11/09/auto-change-output-devices-in-ubuntu/" >Tweet</a>
+  
+  
+  
 </div>
+
+    
+    <p class="meta">
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
 <aside class="sidebar">
   
     <section>
@@ -192,6 +222,7 @@
 
   
 </aside>
+
 
     </div>
   </div>

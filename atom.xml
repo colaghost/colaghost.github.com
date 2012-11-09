@@ -4,7 +4,7 @@
   <title><![CDATA[Colaghost's Blog]]></title>
   <link href="http://colaghost.github.com/atom.xml" rel="self"/>
   <link href="http://colaghost.github.com/"/>
-  <updated>2012-11-09T22:01:41+08:00</updated>
+  <updated>2012-11-09T22:17:25+08:00</updated>
   <id>http://colaghost.github.com/</id>
   <author>
     <name><![CDATA[colaghost]]></name>
@@ -14,20 +14,75 @@
 
   
   <entry>
-    <title type="html"><![CDATA[hello test]]></title>
-    <link href="http://colaghost.github.com/blog/2012/11/09/hello-test/"/>
-    <updated>2012-11-09T21:56:00+08:00</updated>
-    <id>http://colaghost.github.com/blog/2012/11/09/hello-test</id>
-    <content type="html"><![CDATA[
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[hello world]]></title>
-    <link href="http://colaghost.github.com/blog/2012/11/02/hello-world/"/>
-    <updated>2012-11-02T15:53:00+08:00</updated>
-    <id>http://colaghost.github.com/blog/2012/11/02/hello-world</id>
-    <content type="html"><![CDATA[
+    <title type="html"><![CDATA[ubuntu下自动切换声音输出设备]]></title>
+    <link href="http://colaghost.github.com/blog/2012/11/09/auto-change-output-devices-in-ubuntu/"/>
+    <updated>2012-11-09T22:10:00+08:00</updated>
+    <id>http://colaghost.github.com/blog/2012/11/09/auto-change-output-devices-in-ubuntu</id>
+    <content type="html"><![CDATA[<p>我有一个usb耳机，在ubuntu下驱动也正常，不过有一个蛋疼的地方就是每次插进usb耳机都不会自动切换到usb耳机对应的声音输出设备，次次都要手动去选择对应的，于是想着能不能写一个脚本来实现。<br/>
+不过貌似关于这方面的中文资料不多，google了很久都没有什么结果，倒是找出一个freebsd上能实现的，就是sysctl，不过貌似ubuntu下实现不了。后来在stackoverflow上问老外才得知用pacmd可以列出各种可用的声音输出设备还有设置默认输出设备等操作神马的。<br/>
+弄了一下，果真OK了，写随意写了一个脚本来测试了，这个脚本假设系统使用pulseaudio的。<br/>
+原理也不难，就是检测所有的声音设备，找出当前默认的声音设备，然后把声音设备切换到下一个，重新运行脚本就可以把声音设备切换回原来默认的了。</p>
+
+<figure class='code'><figcaption><span> (change_out_device.sh)</span> <a href='http://colaghost.github.com/downloads/code/change_out_device.sh'>download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/bash</span>
+</span><span class='line'>
+</span><span class='line'><span class="nb">declare</span> -i <span class="nv">count</span><span class="o">=</span><span class="sb">`</span>pacmd list-sinks | grep -c index:<span class="o">[[</span>:space:<span class="o">]][[</span>:digit:<span class="o">]]</span><span class="sb">`</span>
+</span><span class='line'><span class="nb">declare</span> -i <span class="nv">active</span><span class="o">=</span><span class="sb">`</span>pacmd list-sinks | sed -n -e <span class="s1">&#39;s/\*[[:space:]]index:[[:space:]]\([[:digit:]]\)/\1/p&#39;</span><span class="sb">`</span>
+</span><span class='line'><span class="nb">declare</span> -i <span class="nv">major</span><span class="o">=</span><span class="nv">$count</span>-1
+</span><span class='line'><span class="nb">declare</span> -i <span class="nv">next</span><span class="o">=</span>0
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> <span class="nv">$active</span> -ne <span class="nv">$major</span> <span class="o">]</span> ; <span class="k">then</span>
+</span><span class='line'><span class="nv">next</span><span class="o">=</span>active+1
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k"> </span>
+</span><span class='line'>pacmd <span class="s2">&quot;set-default-sink ${next}&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">for </span>app in <span class="k">$(</span>pacmd list-sink-inputs | sed -n -e <span class="s1">&#39;s/index:[[:space:]]\([[:digit:]]\)/\1/p&#39;</span><span class="k">)</span>;
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'>pacmd <span class="s2">&quot;move-sink-input $app $next&quot;</span>
+</span><span class='line'><span class="k">done</span>
+</span><span class='line'><span class="k"> </span>
+</span><span class='line'><span class="nb">declare</span> -i <span class="nv">ndx</span><span class="o">=</span>0
+</span><span class='line'>pacmd list-sinks | sed -n -e <span class="s1">&#39;s/device.description[[:space:]]=[[:space:]]&quot;\(.*\)&quot;/\1/p&#39;</span> | <span class="k">while </span><span class="nb">read </span>line;
+</span><span class='line'><span class="k">do</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> <span class="nv">$next</span> -eq <span class="nv">$ndx</span> <span class="o">]</span> ; <span class="k">then</span>
+</span><span class='line'>notify-send -i notification-audio-volume-high <span class="s2">&quot;声音输出切换到&quot;</span> <span class="s2">&quot;$line&quot;</span>
+</span><span class='line'><span class="nb">exit</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>ndx+<span class="o">=</span>1
+</span><span class='line'><span class="k">done</span>;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>脚本里在切换后会做notify-send的提示，假设找不到命令的可以执行sudo apt-get install libnotify-bin安装一下，但不安装也没有什么关系，只是一个提示而已。<br/>
+为了方便可以将脚本复制到/usr/bin目录下，然后在“键盘快捷键”里面添加多一个快捷键，命令就是脚本名了，最后设定好想要的快捷键，以后就可以直接切换了.</p>
 ]]></content>
   </entry>
   
