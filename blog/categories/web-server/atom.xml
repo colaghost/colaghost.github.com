@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: web-server | Colaghost's Blog]]></title>
+  <link href="http://colaghost.github.com/blog/categories/web-server/atom.xml" rel="self"/>
+  <link href="http://colaghost.github.com/"/>
+  <updated>2012-11-10T14:11:15+08:00</updated>
+  <id>http://colaghost.github.com/</id>
+  <author>
+    <name><![CDATA[colaghost]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Nginx内存管理及数据结构浅析–内存池]]></title>
+    <link href="http://colaghost.github.com/blog/2012/11/10/nginx-memory-pool/"/>
+    <updated>2012-11-10T13:34:00+08:00</updated>
+    <id>http://colaghost.github.com/blog/2012/11/10/nginx-memory-pool</id>
+    <content type="html"><![CDATA[<p>基本上所有的高性能服务器都会涉及到内存池这一块，nginx也不例外。nginx的内存池实现相对比较简洁精巧，看起来比较容易理解。</p>
+
+<p>以下是nginx内存池的示意图，这是根据自己的理解画的，有什么理解错误的地方欢迎大家拍砖。</p>
+
+<p><img src="/images/ngx_pool1.jpeg"></p>
+
+<p>nginx的内存池主要涉及它的创建、小内存分配、大内存分配和资源清理。</p>
+
+<p><strong>一、内存池的创建</strong></p>
+
+<p>这里主要涉及到两个数据结构，分别是ngx_pool_s和ngx_pool_data_t。ngx_pool_s维护了内存池的的头部信息，而ngx_pool_data_t维护了内存池的数据部分的信息。</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="c1">//该结构用来维护内存池的数据部分，供用户分配内存使用</span>
+</span><span class='line'><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">u_char</span>               <span class="o">*</span><span class="n">last</span><span class="p">;</span><span class="c1">//当前内存分配结束的位置</span>
+</span><span class='line'><span class="n">u_char</span>               <span class="o">*</span><span class="n">end</span><span class="p">;</span><span class="c1">//内存池结束位置</span>
+</span><span class='line'><span class="n">ngx_pool_t</span>           <span class="o">*</span><span class="n">next</span><span class="p">;</span><span class="c1">//指向下一个内存池</span>
+</span><span class='line'><span class="n">ngx_uint_t</span>            <span class="n">failed</span><span class="p">;</span><span class="c1">//统计内存池不能满足分配请求的次数</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="p">}</span> <span class="n">ngx_pool_data_t</span><span class="p">;</span>
+</span><span class='line'><span class="c1">//该结构维护整个内存池链表的头部信息</span>
+</span><span class='line'><span class="k">struct</span> <span class="n">ngx_pool_s</span> <span class="p">{</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">ngx_pool_data_t</span>       <span class="n">d</span><span class="p">;</span><span class="c1">//数据块</span>
+</span><span class='line'><span class="kt">size_t</span>                <span class="n">max</span><span class="p">;</span><span class="c1">//数据块的大小，即可分配的内存的最大值</span>
+</span><span class='line'><span class="n">ngx_pool_t</span>           <span class="o">*</span><span class="n">current</span><span class="p">;</span><span class="c1">//当前内存池</span>
+</span><span class='line'><span class="n">ngx_chain_t</span>          <span class="o">*</span><span class="n">chain</span><span class="p">;</span><span class="c1">//这一部分暂不涉及</span>
+</span><span class='line'><span class="n">ngx_pool_large_t</span>     <span class="o">*</span><span class="n">large</span><span class="p">;</span><span class="c1">//分配大内存使用，即请求分配的内存大小超过max</span>
+</span><span class='line'><span class="n">ngx_pool_cleanup_t</span>   <span class="o">*</span><span class="n">cleanup</span><span class="p">;</span><span class="c1">//用来指向内存池释放时同时释放的资源</span>
+</span><span class='line'><span class="n">ngx_log_t</span>            <span class="o">*</span><span class="n">log</span><span class="p">;</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div></p>
+
+<p>有了上面两个结构体，实际上已经可以分配一个内存池了，创建一个内存池的入口函数是ngx_pool_t <em>ngx_create_pool(size_t size, ngx_log_t </em>log)，切记size需要大于sizeof(ngx_pool_s)，大于部分为此内存池供分配的内存。返回的ngx_pool_t指针指向整个内存池链表的头结点，头结点会维护整个内存池链接的头部信息，下次如果往内存池链表里面添加ngx_pool_s结点时只会维护顶部的ngx_pool_data_t部分的信息，即只维护此内存池结点的数据部分的信息。
+关于整个内存池链接的结构可以参考下上图，pool指向内存池的头部结点，红色部分为可分配用户使用的内存块。由上图可以看出来，pool->d.last指向从内存池分配新内存的起始地址，pool->d.end指向这块内存池的结束位置，所有分配内存的地址都不能超过pool->d.end。
+当进行内存分配操作时，首先判断要分配的size大小是否超过max，是的话就直接跟系统分配一块大内存，跟malloc一样，挂在pool->large下；否则就直接在pool->current指向的内存池里分配，并相应地移动pool->current->d.last的位置。</p>
+
+<p><strong>二、分配小内存（size&lt;max）</strong></p>
+
+<p>小内存分配涉及到的接口函数主要有：</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="o">&lt;</span><span class="n">em</span><span class="o">&gt;</span><span class="n">ngx_palloc</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">&lt;/</span><span class="n">em</span><span class="o">&gt;</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'><span class="kt">void</span> <span class="o">&lt;</span><span class="n">em</span><span class="o">&gt;</span><span class="n">ngx_pnalloc</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">&lt;/</span><span class="n">em</span><span class="o">&gt;</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'><span class="kt">void</span> <span class="o">&lt;</span><span class="n">em</span><span class="o">&gt;</span><span class="n">ngx_pcalloc</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">&lt;/</span><span class="n">em</span><span class="o">&gt;</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'><span class="kt">void</span> <span class="o">&lt;</span><span class="n">em</span><span class="o">&gt;</span><span class="n">ngx_pmemalign</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">&lt;/</span><span class="n">em</span><span class="o">&gt;</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">alignment</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div></p>
+
+<p>头三个函数都是进行内存分配的，参数为要从中分配内存的内存池链表的头结点和要分配的内存大小。ngx_palloc和ngx_pnalloc都是从内存池中分配内存，区别就是ngx_palloc取得的内存是对齐的，而ngx_pnalloc则没有；ngx_pcalloc是调用ngx_palloc分配内存的，并将分配的内存都置0.ngx_pmemalign主要用来对指针进行对齐，但是nginx似乎没有使用这个，而是用到了另外定义的一个宏，下面会谈到。
+这里由于篇幅问题只进行ngx_palloc函数的分析，其它两个大同小异。</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="o">*</span>
+</span><span class='line'><span class="nf">ngx_palloc</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span>   <span class="n">u_char</span>      <span class="o">*</span><span class="n">m</span><span class="p">;</span>
+</span><span class='line'>     <span class="n">ngx_pool_t</span>  <span class="o">*</span><span class="n">p</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="k">if</span> <span class="p">(</span><span class="n">size</span> <span class="o">&amp;</span><span class="n">lt</span><span class="p">;</span><span class="o">=</span> <span class="n">pool</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">max</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>         <span class="n">p</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">current</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>         <span class="k">do</span> <span class="p">{</span>
+</span><span class='line'>             <span class="n">m</span> <span class="o">=</span> <span class="n">ngx_align_ptr</span><span class="p">(</span><span class="n">p</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">last</span><span class="p">,</span> <span class="n">NGX_ALIGNMENT</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>             <span class="k">if</span> <span class="p">((</span><span class="kt">size_t</span><span class="p">)</span> <span class="p">(</span><span class="n">p</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">end</span> <span class="o">-</span> <span class="n">m</span><span class="p">)</span> <span class="o">&amp;</span><span class="n">gt</span><span class="p">;</span><span class="o">=</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                             <span class="n">p</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">last</span> <span class="o">=</span> <span class="n">m</span> <span class="o">+</span> <span class="n">size</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>                             <span class="k">return</span> <span class="n">m</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>                     <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>                     <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">;</span>
+</span><span class='line'>             <span class="p">}</span> <span class="k">while</span> <span class="p">(</span><span class="n">p</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>             <span class="k">return</span> <span class="n">ngx_palloc_block</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'>     <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="k">return</span> <span class="n">ngx_palloc_large</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div></p>
+
+<p>这里分配的是小内存，进行的是size&lt;=pool->max部分的逻辑。我们可以看到nginx会从pool->current指向的内存池结点开始遍历，首先用ngx_align_ptr这个宏对last指针进行内存对齐，再判断当前内存池结点的数据部分剩余的内存是否够分配，如果够的话则移动last指针size大小的值，然后返回分配的内存的起始地址；否则移动到下一个内存池结点再进行同样的判断。
+这里有一种可能性，即内存池链表里可能所有节点的数据部分的剩余内存都不够分配了，这时候就需要在内存池链表里插入一个新的内存池（ngx_pool_t）结点，这是由ngx_palloc_block函数完成的。</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">static</span> <span class="kt">void</span> <span class="o">*</span>
+</span><span class='line'><span class="nf">ngx_palloc_block</span><span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="n">pool</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span>  <span class="n">u_char</span>      <span class="o">*</span><span class="n">m</span><span class="p">;</span>
+</span><span class='line'>    <span class="kt">size_t</span>       <span class="n">psize</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">ngx_pool_t</span>  <span class="o">*</span><span class="n">p</span><span class="p">,</span> <span class="o">*</span><span class="n">new</span><span class="p">,</span> <span class="o">*</span><span class="n">current</span><span class="p">;</span>
+</span><span class='line'>                    <span class="err"> </span>
+</span><span class='line'>    <span class="n">psize</span> <span class="o">=</span> <span class="p">(</span><span class="kt">size_t</span><span class="p">)</span> <span class="p">(</span><span class="n">pool</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">end</span> <span class="o">-</span> <span class="p">(</span><span class="n">u_char</span> <span class="o">*</span><span class="p">)</span> <span class="n">pool</span><span class="p">);</span>
+</span><span class='line'>                        <span class="err"> </span>
+</span><span class='line'>    <span class="n">m</span> <span class="o">=</span> <span class="n">ngx_alloc</span><span class="p">(</span><span class="n">psize</span><span class="p">,</span> <span class="n">pool</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">log</span><span class="p">);</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="n">m</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="nb">NULL</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>                                <span class="err"> </span>
+</span><span class='line'>    <span class="n">new</span> <span class="o">=</span> <span class="p">(</span><span class="n">ngx_pool_t</span> <span class="o">*</span><span class="p">)</span> <span class="n">m</span><span class="p">;</span>
+</span><span class='line'>                                <span class="err"> </span>
+</span><span class='line'>    <span class="n">new</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">end</span> <span class="o">=</span> <span class="n">m</span> <span class="o">+</span> <span class="n">psize</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">new</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">new</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">failed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>                                                <span class="err"> </span>
+</span><span class='line'>    <span class="n">m</span> <span class="o">+=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ngx_pool_data_t</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">m</span> <span class="o">=</span> <span class="n">ngx_align_ptr</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">NGX_ALIGNMENT</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">new</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">last</span> <span class="o">=</span> <span class="n">m</span> <span class="o">+</span> <span class="n">size</span><span class="p">;</span>
+</span><span class='line'>            <span class="err"> </span>
+</span><span class='line'>    <span class="n">current</span> <span class="o">=</span> <span class="n">pool</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">current</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">for</span> <span class="p">(</span><span class="n">p</span> <span class="o">=</span> <span class="n">current</span><span class="p">;</span> <span class="n">p</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">;</span> <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>     <span class="k">if</span> <span class="p">(</span><span class="n">p</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">failed</span><span class="o">++</span> <span class="o">&amp;</span><span class="n">gt</span><span class="p">;</span> <span class="mi">4</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>             <span class="n">current</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span><span class="p">;</span>
+</span><span class='line'>     <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">p</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">d</span><span class="p">.</span><span class="n">next</span> <span class="o">=</span> <span class="n">new</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">pool</span><span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span><span class="n">current</span> <span class="o">=</span> <span class="n">current</span> <span class="o">?</span> <span class="n">current</span> <span class="o">:</span> <span class="n">new</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="n">m</span><span class="p">;</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div></p>
+
+<p>ngx_palloc_block函数会往内存池链表里插入一个新的内存池结点，并返回请求分配的内存的起始地址。
+注意在这时nginx会对p->current结点后的所有内存池结点的数据部分维护的failed的值加1,并当failed的值超过4时，则将p->current的值指向下一个内存池结点，这也就意味着内存池链表里每一个结点的可分配内存不一定会被分配完。
+这里再提下ngx_align_ptr这个宏，NGX_ALIGNMENT取值32或者64（sizeof(unsigned long)）,这个宏会在这两个平台里对指针进行对齐，下面看看这个宏的定义。</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">h1</span><span class="o">&gt;</span><span class="n">define</span> <span class="n">ngx_align_ptr</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>               <span class="err">\</span><span class="o">&lt;/</span><span class="n">h1</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span>    <span class="p">(</span><span class="n">u_char</span> <span class="o">*</span><span class="p">)</span> <span class="p">(((</span><span class="kt">uintptr_t</span><span class="p">)</span> <span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">+</span> <span class="p">((</span><span class="kt">uintptr_t</span><span class="p">)</span> <span class="n">a</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="o">&amp;</span><span class="n">amp</span><span class="p">;</span> <span class="o">~</span><span class="p">((</span><span class="kt">uintptr_t</span><span class="p">)</span> <span class="n">a</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div></p>
+
+<p>uintptr_t可以将指针类型转换为整数，由于这段代码跨平台，所以用uintptr_t更安全，因为有可能为4或者8.
+从二进制来看，为32位平台时，进行指针对齐需要保证指针的值的最低两位为0，即为4的倍数。当最低两位有任意一位不为零时，则需要加上((uintptr_t) a – 1)) （这时候a取值为4）产生进位，再通过与~((uintptr_t) a – 1)(最低四位是为1100)做且运算，抹平指针最低两位，这时候对齐完成。
+这段代码并不复杂，但是涉及的方面比较多，效率也很高，比较有意思。</p>
+
+<p><strong>三、分配大块内存</strong></p>
+
+<p>大块内存的分配相对来说逻辑上比较简单，这时候并不是从内存池里分配，而是直接跟系统申请（相当于直接用malloc分配），再将这块内存挂到内存池头部的large字段里。由于内存池主要是用来解决小内存的频繁分配问题，这里大内存直接向系统申请是可以忍受的。大块内存的组织结构可以参考上图。
+注意每块大内存都有一个数据结构进行维护的:</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">struct</span> <span class="n">ngx_pool_large_s</span> <span class="p">{</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">ngx_pool_large_t</span>     <span class="o">*</span><span class="n">next</span><span class="p">;</span><span class="c1">//指向下一块大内存</span>
+</span><span class='line'><span class="kt">void</span>                 <span class="o">*</span><span class="n">alloc</span><span class="p">;</span><span class="c1">//指向分配的大块内存</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div></p>
+
+<p>这个数据结构是在内存池里进行分配的，因为这部分信息占用的字节比较少。由于大块内存很多时候可能需要及时被释放，所以nginx提供了ngx_int_t ngx_pfree(ngx_pool_t <em>pool, void </em>p)函数进行释放。其中p就是指向大块内存的地址。ngx_pfree只会释放分配的大块内存，但数据结构部分并不会被释放，会留下来供下次分配大内存使用。</p>
+
+<p><strong>四、资源回收</strong></p>
+
+<p>可以参考上图的cleanup部分，会发现所有需要被释放的资源会形成一个循环链表。每个需要释放的资源都会有一个头部结构：
+<div class='bogus-wrapper'><notextile><figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">struct</span> <span class="n">ngx_pool_cleanup_s</span> <span class="p">{</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">ngx_pool_cleanup_pt</span>   <span class="n">handler</span><span class="p">;</span><span class="c1">//释放资源的函数指针</span>
+</span><span class='line'><span class="kt">void</span>                 <span class="o">*</span><span class="n">data</span><span class="p">;</span><span class="c1">//待释放的资源</span>
+</span><span class='line'><span class="n">ngx_pool_cleanup_t</span>   <span class="o">*</span><span class="n">next</span><span class="p">;</span><span class="c1">//指向下一个待释放的资源头部</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div></p>
+
+<p>这里可以看到，当挂载一个待释放的资源时，需要注册一个释放函数。这就意味着这里不单单可以进行内存的释放，相应的文件标识符等也可以在这里进行释放，只要注册相应的释放资源函数调用即可。</p>
+
+<p><strong>五、内存回收</strong></p>
+
+<p>一路看来，貌似nginx并没有提供释放内存的接口（除了大内存块），难道nginx的内存都是只申请不释放的，这样不行啊，内存再多也只有吃完的时候啊。但显然我的担心是多余了，nginx并不会这样，它针对特定的场景，如每一个request都会建一个内存池，当request被完成时内存池分配的内存也会一次性被回收，这样就保证了内存有分配也有释放的时候了。当然具体还有很多的场景，由于理解深度还不够这里暂不涉及。</p>
+]]></content>
+  </entry>
+  
+</feed>
